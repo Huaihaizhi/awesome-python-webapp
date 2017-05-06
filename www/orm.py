@@ -40,22 +40,21 @@ def select(sql,args,size=None):
 		logging.info('rows returned: %s' % len(rs))
 		return rs
 
-@asyncio.coroutine
-def execute(sql,args):
+
+async def execute(sql,args):
 	log(sql)
-	with (yield from __pool) as conn:
+	async with __pool.get() as conn:
 		if not autcommit:
-			yield from conn.begin()
+			await conn.begin()
 		try:
-			cur=yield from conn.cursor()
-			yield from cur.execute(sql.replace('?','%s'),args)
-			affected=cur.rowcount
+			async with conn.cursor(aiomysql.DictCursor) as cur:
+				await cur.execute(sql.replace('?','%s'),args)
+				affected=cur.rowcount
 			if not autocommit:
-				yield from conn.commit()
-			yield from cur.close()
+				await conn.commit()
 		except BaseException as e:
 			if not autocommit():
-				yield from conn.rollback()
+				await conn.rollback()
 			raise
 		return affected
 
