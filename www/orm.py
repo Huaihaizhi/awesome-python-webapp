@@ -4,7 +4,7 @@ import asyncio,logging
 import aiomysql
 
 def log(sql,args=()):
-	loging.info('SQL:%s' % sql)
+	logging.info('SQL:%s' % sql)
 
 
 
@@ -17,13 +17,19 @@ def create_pool(loop,**kw):
 		port=kw.get('port',3306),
 		user=kw['user'],
 		password=kw['password'],
-		db=['db'],
-		charset=kw.get('charset','utf-8'),
+		db=kw['database'],
+		charset=kw.get('charset','utf8'),
 		autocommit=kw.get('autocommit',True),
 		maxsize=kw.get('maxsize',10),
 		minsize=kw.get('minsize',1),
 		loop=loop
 	)
+
+async def destory_pool():
+	global __pool
+	if __pool is not None:
+		__pool.close()
+		await __pool.wait_closed()
 
 @asyncio.coroutine
 def select(sql,args,size=None):
@@ -41,10 +47,10 @@ def select(sql,args,size=None):
 		return rs
 
 
-async def execute(sql,args):
+async def execute(sql,args,autocommit=True):
 	log(sql)
 	async with __pool.get() as conn:
-		if not autcommit:
+		if not autocommit:
 			await conn.begin()
 		try:
 			async with conn.cursor(aiomysql.DictCursor) as cur:
@@ -84,7 +90,7 @@ class StringField(Field):
 
 class BooleanField(Field):
 
-	def __init__(self,name=None,deault=False):
+	def __init__(self,name=None,default=False):
 		super().__init__(name,'boolean',False,default)
 
 class IntegerField(Field):
@@ -99,7 +105,7 @@ class FloatField(Field):
 
 class TextField(Field):
 
-	def __initt__(self,name=None,default=None):
+	def __init__(self,name=None,default=None):
 		super().__init__(name,'text',False,default)
 
 class ModelMetaclass(type):
@@ -107,7 +113,7 @@ class ModelMetaclass(type):
 	def __new__(cls,name,bases,attrs):
 		if name=='Model':
 			return type.__new__(cls,name,bases,attrs)
-		tableName=attr.get('__table__',None) or name
+		tableName=attrs.get('__table__',None) or name
 		logging.info('found model:%s (table:%s)' % (name,tableName))
 		mappings=dict()
 		fields=[]
@@ -124,11 +130,11 @@ class ModelMetaclass(type):
 					fields.append(k)
 		if not primaryKey:
 			raise RuntimeError('Primary key not found.')
-		for k in mapping.keys():
+		for k in mappings.keys():
 			attrs.pop(k)
 		escaped_fields=list(map(lambda f: '`%s`' % f,fields))
 		attrs['__mappings__']=mappings
-		attrs['__table__']=table
+		attrs['__table__']=tableName
 		attrs['__primaryKey__']=primaryKey
 		attrs['__fields__']=fields
 		attrs['__select__']='select `%s`,%s from `%s`' % (primaryKey,','.join(escaped_fields),tableName)
@@ -218,7 +224,7 @@ class Model(dict,metaclass=ModelMetaclass):
 	@asyncio.coroutine
 	def save(self):
 		args=list(map(self.getValueOrDefault,self.__fields__))
-		args=append(map(self.getValueOrDefault,self.__fields__))
+		args.append(map(self.getValueOrDefault,self.__fields__))
 		rows=yield from execute(self.__insert__,args)
 		if row !=1:
 			logging.warn('failed to insert record:affected rows:%s' % rows)
