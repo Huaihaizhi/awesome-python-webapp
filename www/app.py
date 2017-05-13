@@ -102,7 +102,7 @@ def datetime_filter(t):
 loop=asyncio.get_event_loop()
 @asyncio.coroutine
 def init(loop):
-	yield from orm.create_pool(loop,user='www',password='www',database='awesome')
+	yield from orm.create_pool(loop,user='www-data',password='www-data',database='awesome')
 	app=web.Application(loop=loop,middlewares=[
 		logger_factory,response_factory
 	])

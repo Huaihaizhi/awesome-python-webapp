@@ -146,15 +146,15 @@ def add_route(app,fn):
 	logging.info('add route %s %s =>%s(%s)' % (method,path,fn.__name__,','.join(inspect.signature(fn).parameters.keys())))
 	app.router.add_route(method,path,RequestHandler(app,fn))
 
-def add_routes(app,modul_name):
-	n=modul_name.rfind('.')
+def add_routes(app,module_name):
+	n=module_name.rfind('.')
 	if n==(-1):
 		mod=__import__(module_name,globals(),locals())
 	else:
 		name=modul_name[n+1:]
 		mod=getattr(__import__(modul_name[:n],globals(),locals(),[name]),name)
 	for attr in dir(mod):
-		if attr.startwith('_'):
+		if attr.startswith('_'):
 			continue
 		fn=getattr(mod,attr)
 		if callable(fn):
