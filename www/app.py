@@ -67,12 +67,12 @@ async def response_factory(app,handler):
 		if isinstance(r,dict):
 			template=r.get('__template__')
 			if template is None:
-				res=web.Response(Body=json.dumps(r,ensure_ascii=False,default=lambda o: o.__dict__).encode('utf-8'))
-				res.content_type='application/json;charset=utf-8'
+				resp=web.Response(Body=json.dumps(r,ensure_ascii=False,default=lambda o: o.__dict__).encode('utf-8'))
+				resp.content_type='application/json;charset=utf-8'
 				return resp
 			else:
-				res=web.Response(body=app['__templating__'].get_template(template).render(**r).encode('utf-8'))
-				res.content_type='text/html;charset=utf-8'
+				resp=web.Response(body=app['__templating__'].get_template(template).render(**r).encode('utf-8'))
+				resp.content_type='text/html;charset=utf-8'
 				return resp
 		if isinstance(r,int) and r >=100 and r<600:
 			return web.Response(r)
@@ -99,10 +99,10 @@ def datetime_filter(t):
 	return u'%s年%s月%s日' % (dt.year,dt.month,dt.day)
 
 			
-loop=asyncio.get_event_loop()
+
 @asyncio.coroutine
 def init(loop):
-	yield from orm.create_pool(loop,user='www-data',password='www-data',database='awesome')
+	yield from orm.create_pool(loop=loop,user='www-data',password='www-data',database='awesome')
 	app=web.Application(loop=loop,middlewares=[
 		logger_factory,response_factory
 	])
@@ -112,6 +112,6 @@ def init(loop):
 	srv=yield from loop.create_server(app.make_handler(),'127.0.0.1',9000)
 	logging.info('Server started at http://127.0.0.1:9000...')
 	return srv
-
+loop=asyncio.get_event_loop()
 loop.run_until_complete(init(loop))
 loop.run_forever()
