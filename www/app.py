@@ -15,8 +15,8 @@ def init_jinja2(app,**kw):
 		autoescape=kw.get('autoescape',True),
 		block_start_string=kw.get('block_start_string','{%'),
 		block_end_string=kw.get('block_end_string','%}'),
-		variable_start_string=kw.get('variable_start_string','{{%'),
-		variable_end_string=kw.get('variable_end_string','%}}'),
+		variable_start_string=kw.get('variable_start_string','{{'),
+		variable_end_string=kw.get('variable_end_string','}}'),
 		auto_reload=kw.get('auto_reload',True)
 	)
 	path=kw.get('path',None)
@@ -30,28 +30,34 @@ def init_jinja2(app,**kw):
 			env.filters[name]=f
 	app['__templating__']=env
 
-async def logger_factory(app,handler):
-	async def logger(request):
+@asyncio.coroutine
+def logger_factory(app,handler):
+	@asyncio.coroutine
+	def logger(request):
 		logging.info('Request:%s%s' % (request.method,request.path))
-		return (await handler(request))
+		return (yield from handler(request))
 	return logger
 
-async def data_factory(app,handler):
-	async def parse_data(request):
+@asyncio.coroutine
+def data_factory(app,handler):
+	@asyncio.coroutine
+	def parse_data(request):
 		if request.method=='POST':
 			if request.content_type.startwith('appliation/json'):
-				request.__data__=await request.json()
+				request.__data__=yield from request.json()
 				logging.info('request json:%s' % str(request.__data__))
 			elif request.content_type.startwith('application/x-www-form-urlencoded'):
-				request.__data__=await request.post()
-				logging.info('request form:%s' % str(request.__data__))
-		return (await handler(request))
+				request.__data__=yield from request.post()
+				logging.info('request from:%s' % str(request.__data__))
+		return (yield from handler(request))
 	return parse_data
 
-async def response_factory(app,handler):
-	async def response(request):
+@asyncio.coroutine
+def response_factory(app,handler):
+	@asyncio.coroutine
+	def response(request):
 		logging.info('Response hanler...')
-		r=await handler(request)
+		r=yield from handler(request)
 		if isinstance(r,web.StreamResponse):
 			return r
 		if isinstance(r,bytes):
@@ -90,23 +96,22 @@ def datetime_filter(t):
 	if delta<60:
 		return u'1分钟前'
 	if delta<3600:
-		return u'%s分钟前' % (delta//60)
+		return u'%s分钟前' % (delta // 60)
 	if delta<86400:
-		return u'%s小时前' % (delta//3600)
+		return u'%s小时前' % (delta // 3600)
 	if delta<604800:
-		return u'%s天前' % (delta//86400)
+		return u'%s天前' % (delta // 86400)
 	dt=datetime.fromtimestamp(t)
 	return u'%s年%s月%s日' % (dt.year,dt.month,dt.day)
 
 			
-
 @asyncio.coroutine
 def init(loop):
-	yield from orm.create_pool(loop=loop,user='www-data',password='www-data',database='awesome')
+	yield from orm.create_pool(loop=loop,host='127.0.0.1',port=3306,user='www-data',password='www-data',database='awesome')
 	app=web.Application(loop=loop,middlewares=[
 		logger_factory,response_factory
 	])
-	init_jinja2(app,filter=dict(datetime=datetime_filter))
+	init_jinja2(app,filters=dict(datetime=datetime_filter))
 	add_routes(app,'handlers')
 	add_static(app)
 	srv=yield from loop.create_server(app.make_handler(),'127.0.0.1',9000)

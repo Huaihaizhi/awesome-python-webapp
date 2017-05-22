@@ -30,7 +30,7 @@ class APIResourceNotFoundError(APIError):
 	def __init__(self,field,message=''):
 		super(APIResourceNotFoundError,self).__init__('value:notfound',field,message)
 
-class APIPermissionError(APIErroe):
+class APIPermissionError(APIError):
 	'''
 	Indicate the api has no permission.
 	'''
