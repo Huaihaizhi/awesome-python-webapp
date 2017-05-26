@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import config_default
 class Dict(dict):
@@ -37,7 +37,7 @@ def toDict(d):
 		D[k]=toDict(v) if isinstance(v,dict) else v
 	return D
 
-configs=configs_default.configs
+configs=config_default.configs
 
 try:
 	import configs_override
