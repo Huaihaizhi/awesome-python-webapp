@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-__author__ = 'Michael Liao'
-
 ' url handlers '
 
 import re, time, json, logging, hashlib, base64, asyncio
@@ -76,6 +74,7 @@ def cookie2user(cookie_str):
         return None
 
 @get('/')
+@asyncio.coroutine
 def index(*, page='1'):
     page_index = get_page_index(page)
     num = yield from Blog.findNumber('count(id)')
@@ -91,6 +90,7 @@ def index(*, page='1'):
     }
 
 @get('/blog/{id}')
+@asyncio.coroutine
 def get_blog(id):
     blog = yield from Blog.find(id)
     comments = yield from Comment.findAll('blog_id=?', [id], orderBy='created_at desc')
@@ -116,6 +116,7 @@ def signin():
     }
 
 @post('/api/authenticate')
+@asyncio.coroutine
 def authenticate(*, email, passwd):
     if not email:
         raise APIValueError('email', 'Invalid email.')
@@ -190,6 +191,7 @@ def manage_users(*, page='1'):
     }
 
 @get('/api/comments')
+@asyncio.coroutine
 def api_comments(*, page='1'):
     page_index = get_page_index(page)
     num = yield from Comment.findNumber('count(id)')
@@ -200,6 +202,7 @@ def api_comments(*, page='1'):
     return dict(page=p, comments=comments)
 
 @post('/api/blogs/{id}/comments')
+@asyncio.coroutine
 def api_create_comment(id, request, *, content):
     user = request.__user__
     if user is None:
@@ -214,6 +217,7 @@ def api_create_comment(id, request, *, content):
     return comment
 
 @post('/api/comments/{id}/delete')
+@asyncio.coroutine
 def api_delete_comments(id, request):
     check_admin(request)
     c = yield from Comment.find(id)
@@ -223,6 +227,7 @@ def api_delete_comments(id, request):
     return dict(id=id)
 
 @get('/api/users')
+@asyncio.coroutine
 def api_get_users(*, page='1'):
     page_index = get_page_index(page)
     num = yield from User.findNumber('count(id)')
@@ -238,6 +243,7 @@ _RE_EMAIL = re.compile(r'^[a-z0-9\.\-\_]+\@[a-z0-9\-\_]+(\.[a-z0-9\-\_]+){1,4}$'
 _RE_SHA1 = re.compile(r'^[0-9a-f]{40}$')
 
 @post('/api/users')
+@asyncio.coroutine
 def api_register_user(*, email, name, passwd):
     if not name or not name.strip():
         raise APIValueError('name')
@@ -252,6 +258,7 @@ def api_register_user(*, email, name, passwd):
     sha1_passwd = '%s:%s' % (uid, passwd)
     user = User(id=uid, name=name.strip(), email=email, passwd=hashlib.sha1(sha1_passwd.encode('utf-8')).hexdigest(), image='http://www.gravatar.com/avatar/%s?d=mm&s=120' % hashlib.md5(email.encode('utf-8')).hexdigest())
     yield from user.save()
+    print(user)
     # make session cookie:
     r = web.Response()
     r.set_cookie(COOKIE_NAME, user2cookie(user, 86400), max_age=86400, httponly=True)
@@ -261,6 +268,7 @@ def api_register_user(*, email, name, passwd):
     return r
 
 @get('/api/blogs')
+@asyncio.coroutine
 def api_blogs(*, page='1'):
     page_index = get_page_index(page)
     num = yield from Blog.findNumber('count(id)')
@@ -271,11 +279,13 @@ def api_blogs(*, page='1'):
     return dict(page=p, blogs=blogs)
 
 @get('/api/blogs/{id}')
+@asyncio.coroutine
 def api_get_blog(*, id):
     blog = yield from Blog.find(id)
     return blog
 
 @post('/api/blogs')
+@asyncio.coroutine
 def api_create_blog(request, *, name, summary, content):
     check_admin(request)
     if not name or not name.strip():
@@ -289,6 +299,7 @@ def api_create_blog(request, *, name, summary, content):
     return blog
 
 @post('/api/blogs/{id}')
+@asyncio.coroutine
 def api_update_blog(id, request, *, name, summary, content):
     check_admin(request)
     blog = yield from Blog.find(id)
@@ -305,6 +316,7 @@ def api_update_blog(id, request, *, name, summary, content):
     return blog
 
 @post('/api/blogs/{id}/delete')
+@asyncio.coroutine
 def api_delete_blog(request, *, id):
     check_admin(request)
     blog = yield from Blog.find(id)

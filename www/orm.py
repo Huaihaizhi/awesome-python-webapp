@@ -25,6 +25,14 @@ def create_pool(loop, **kw):
     )
 
 @asyncio.coroutine
+def destory_pool():
+    global __pool
+    if __pool is not None:
+        __pool.close()
+        yield from __pool.wait_closed()
+
+
+@asyncio.coroutine
 def select(sql, args, size=None):
     log(sql, args)
     global __pool
@@ -56,6 +64,7 @@ def execute(sql, args, autocommit=True):
             if not autocommit:
                 yield from conn.rollback()
             raise
+        conn.close()
         return affected
 
 def create_args_string(num):
