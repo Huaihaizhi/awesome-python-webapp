@@ -91,7 +91,7 @@ def index(*, page='1'):
 
 @get('/blog/{id}')
 @asyncio.coroutine
-def get_blog(id):
+def get_blog(id,request):
     blog = yield from Blog.find(id)
     comments = yield from Comment.findAll('blog_id=?', [id], orderBy='created_at desc')
     for c in comments:
@@ -100,6 +100,7 @@ def get_blog(id):
     return {
         '__template__': 'blog.html',
         'blog': blog,
+        '__user__':request.__user__,
         'comments': comments
     }
 
