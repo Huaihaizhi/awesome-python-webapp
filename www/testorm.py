@@ -7,7 +7,7 @@ import asyncio
 loop=asyncio.get_event_loop()
 @asyncio.coroutine
 def test():
-    yield from orm.create_pool(loop,user='www-data', password='www-data', database='awesome')
+    yield from orm.create_pool(loop,user='xxx', password='xxx', database='awesome')
     n= User(name='Test2', email='test2@example.com', passwd='1234509876', image='about:blank')
     yield from n.save()
 
